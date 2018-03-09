@@ -158,6 +158,8 @@ df = pd.DataFrame(data, columns=['team', 'sen_pos', 'sen_neu', 'sen_neg',
 df['date'] = pd.to_datetime(datetime.datetime.now())
 df.index = df['date']
 del df['date']
+
+
 with open('nba_sentiment.csv', 'a') as f:
     df.to_csv(f, header=False)
 #     df.to_csv(f, index=False, mode='a', header=(not os.path.exists(f)))
