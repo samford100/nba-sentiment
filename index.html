@@ -1,12 +1,16 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
+
 <style>
     body {
         text-align: center;
         background: #dddddd;
+        font-family: 'Saira Condensed', sans-serif;
+    }
+
+    .chart-container {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        font-family: 'Saira Condensed', sans-serif;
     }
 
     div>h1 {
@@ -68,6 +72,8 @@
         left: 0;
     }
 </style>
+
+
 <!-- <script src="https://d3js.org/d3.v4.min.js"></script> -->
 <script src="./lib/d3.v3.min.js"></script>
 <script src="./lib/d3-queue.v3.min.js"></script>
@@ -82,7 +88,7 @@
     // import colors from "./colors.js"
 
     processData = (error, games) => {
-        console.log(games)
+        // console.log(games)
         const gamesByDate = d3.nest()
             .key(d => d.date)
             .entries(games)
@@ -91,24 +97,56 @@
             .key(d => d.team)
             .entries(games)
         // console.log(gamesByDate)
-        console.log(gamesByTeam)
+        // console.log(gamesByTeam)
+
+
+        // select
+        // const opts = Object.keys(games[0]).slice(2, 10)
+        // // console.log(opts)
+        // const selectY = d3.select('body').append('div').append('select')
+        //     .attr('class', 'select')
+        //     .on('change', () => {
+        //         const ykey = d3.select('select').property('value')
+        //         return plotAll({ gamesByTeam, ykey })
+
+        //         // change yscale
+
+        //     })
+
+        // const options = selectY.selectAll('option')
+        //     .data(opts).enter()
+        //     .append('option')
+        //     .text(d => d)
+
+        // // use select to change ykey
+        // const ykey = opts[0]
+        const ykey = "sen_com"
+        plotAll({ gamesByTeam, ykey })
+    }
+
+    changeY = () => {
+
+    }
+
+    plotAll = ({ gamesByTeam, ykey }) => {
+        console.log('plotting with: ' + ykey)
+        // select box
+        const chartContainer = d3.select('body')
+            .append('div')
+            .attr('class', 'chart-container')
 
         const teams = gamesByTeam.map(team => team.key)
         // plot({ team: "New York", games: gamesByTeam[0].values, teams })
         gamesByTeam.forEach(team => {
-            plot({ team: team.key, games: team.values, teams })
+            plot({ team: team.key, games: team.values, teams, ykey })
         })
     }
 
-    plot = ({ team, games, teams }) => {
+    plot = ({ team, games, teams, ykey }) => {
         const h = 300;
         const padding = 20;
         const teamColors = teams.map(team => colors[team].mainColor.hex)
-        console.log(colors)
-        console.log('teamcolors2')
         const teamColors2 = teams.map(team => colors[team].colors[Object.keys(colors[team].colors)[1]].hex)
-
-        console.log(teamColors2)
 
         const nbaColors = d3.scale.ordinal()
             .domain(teams)
@@ -118,7 +156,7 @@
             .domain(teams)
             .range(teamColors2)
 
-        const div = d3.select("body")
+        const div = d3.select(".chart-container")
             .append('div')
             // .attr("width", "100%")
             .attr("height", h)
@@ -140,11 +178,11 @@
 
 
         // find way to do this better in d3
-        const sen_coms = games.map(g => g.sen_com)
+        // const sen_coms = games.map(g => g.sen_com)
         // console.log(sen_coms)
         const y = d3.scale.linear()
             // .domain([d3.min(sen_coms), d3.max(sen_coms)])
-            .domain([6, -6])
+            .domain([10, -10])
             .range([0 + padding, h - padding])
 
         // tooltip
@@ -161,7 +199,8 @@
             w: 500,
             h,
             padding,
-            tip
+            tip,
+            ykey
         })
 
         plotTeam1D({
@@ -172,25 +211,23 @@
             w: 100,
             h,
             padding,
-            tip
+            tip,
+            ykey
         })
 
     }
 
     regress = ({ points }) => {
         /*
-                b0 = ybar - b1*xbar
-                b1 = sum(xi - xbar)(yi - ybar) / sum(xi-xbar)^2
-        
-                points = [
-                    {x: date, y: 10},
-                    {x: date, y: -4},
-                    ...
-                ]
-        
-                */
-        // console.log('points')
-        // console.log(points)
+        b0 = ybar - b1*xbar
+        b1 = sum(xi - xbar)(yi - ybar) / sum(xi-xbar)^2
+
+        points = [
+            {x: date, y: 10},
+            {x: date, y: -4},
+            ...
+        ]
+        */
 
         const xs = points.map(point => point.x)
         const xbar = sum(points.map(point => point.x)) / points.length
@@ -203,16 +240,7 @@
     }
 
     plotLine = ({ points }) => {
-
         const { b0, b1 } = regress({ points })
-
-        // const yhat = [];
-        // // fit line using coeffs
-        // for (let i = 0; i < points.length; i++) {
-        //     yhat.push(b0 + (points[i].x * b1));
-        // }
-
-        // const yhat = points.map(points => b0 + (point.x * b1))
 
         const data = points.map((point, i) => {
             return {
@@ -221,21 +249,12 @@
                 x: point.x
             }
         })
-
-        // var data = [];
-        // for (i = 0; i < points.length; i++) {
-        //     data.push({
-        //         "yhat": yhat[i],
-        //         "y": points[i].y,
-        //         "x": points[i].x
-        //     })
-        // }
         return data
     }
 
     sum = (l) => l.reduce((a, b) => a + b)
 
-    plotTeam2D = ({ team, games, div, y, w, h, padding, tip }) => {
+    plotTeam2D = ({ team, games, div, y, w, h, padding, tip, ykey }) => {
 
         const svg = div
             .append("svg")
@@ -247,7 +266,8 @@
         // need time scale
         const dates = games.map(g => g.date)
         const x = d3.time.scale()
-            .domain([new moment(d3.min(dates)), new moment(d3.max(dates))])
+            // .domain([new moment(d3.min(dates)), new moment(d3.max(dates))])
+            .domain([new moment('03/07/2018'), new moment()])
             .range([0 + padding, w - padding])
 
         //axis
@@ -276,25 +296,18 @@
             .attr("transform", "translate(" + padding + ",0)")
             .call(yAxis)
 
-
+        // plot connecting line
         const points = games.map(game => {
-            return { x: x(moment(game.date)), y: y(game.sen_com) }
+            return { x: x(moment(game.date)), y: y(game[ykey]) }
         })
 
         const data = plotLine({ points })
-        console.log('data')
-        console.log(data)
+        // console.log('data')
+        // console.log(data)
 
-        // const line = d3.svg.line()
-        //     .x(function (d) { return x(moment(d.date)); })
-        //     .y(function (d) { return y(d.sen_com); });
-        var line = d3.svg.line()
-            .x(function (d) {
-                return d.x;
-            })
-            .y(function (d) {
-                return d.yhat;
-            });
+        const line = d3.svg.line()
+            .x(d => d.x)
+            .y(d => d.yhat)
 
         svg.append("path")
             .datum(data)
@@ -305,36 +318,21 @@
             .attr("stroke-width", 1.5)
             .attr("d", line);
 
-
-        // plot connecting line
-        // const line = d3.svg.line()
-        //     .x(function (d) { return x(moment(d.date)); })
-        //     .y(function (d) { return y(d.sen_com); });
-
-        // svg.append("path")
-        //     .datum(games)
-        //     .attr("fill", "none")
-        //     .attr("stroke", "white")
-        //     .attr("stroke-linejoin", "round")
-        //     .attr("stroke-linecap", "round")
-        //     .attr("stroke-width", 1.5)
-        //     .attr("d", line);
-        //
-
+        //plot circles
         const circles = svg.selectAll("circle")
             .data(games)
             .enter()
             .append("text")
             .text(d => d.won == "True" ? '🏆' : '🗑️')
             .attr('x', d => x(moment(d.date)))
-            .attr('y', d => y(d.sen_com))
+            .attr('y', d => y(d[ykey]))
             .style('font-size', '25px')
             .on('mouseover', tip.show)
             .on('mouseout', tip.hide)
 
     }
 
-    plotTeam1D = ({ team, games, div, y, w, h, padding, tip }) => {
+    plotTeam1D = ({ team, games, div, y, w, h, padding, tip, ykey }) => {
         const svg = div
             .append("svg")
             .attr("width", w)
@@ -359,7 +357,7 @@
             // .text('🏀')
             .text(d => d.won == "True" ? '🏆' : '🗑️')
             .attr('x', d => w / 2)
-            .attr('y', d => y(d.sen_com))
+            .attr('y', d => y(d[ykey]))
             .style('font-size', '25px')
             .on('mouseover', tip.show)
             .on('mouseout', tip.hide)
