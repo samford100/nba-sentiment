@@ -89,12 +89,22 @@ def read_csv(file):
     #     Z, y, test_size=0.2)
 
     splitter = round(len(Z) * .7)
+    print(splitter)
 
     X_train, X_test = Z[:splitter], Z[splitter+1:]
     y_train, y_test = y[:splitter], y[splitter+1:]
+    print(len(X_train))
+    print(len(X_test))
+    print(len(Z))
+    # train_tf(X_train, y_train, X_test, y_test)
+
     y_hat = train(X_train, y_train.values.ravel(), X_test)
-    tot = (y_hat == y_test.values).sum()
-    print('' + str(tot / len(y_hat)) + "%")
+    right = 0
+    for i in range(len(y_hat)):
+        if y_hat[i] == y_test.values[i]:
+            right += 1
+
+    print('' + str(right / len(y_hat)) + "%")
 
 
 def onehot(X):
@@ -112,20 +122,76 @@ def onehot(X):
     return Z
 
 
-def multilayer_perceptron(x, weights, biases, keep_prob):
+def multilayer_perceptron(x, weights, biases):
     # hidden layer 1 with relu activation
-    layer_1 = tf.add(tf.matmul(x, weights['h1'], biases['b1']))
+    layer_1 = tf.add(tf.matmul(x, weights['h1']), biases['b1'])
     layer_1 = tf.nn.relu(layer_1)
     # hidden layer 2 with relu activation
-    layer_2 = tf.add(tf.matmul(layer_1, weights['h2'], biases['b2']))
+    layer_2 = tf.add(tf.matmul(layer_1, weights['h2']), biases['b2'])
     layer_2 = tf.nn.relu(layer_2)
     # output layer with linear activation
-    out_layer = tf.matmul(layer_2, weights['out'] + biases['out'])
+    out_layer = tf.matmul(layer_2, weights['out']) + biases['out']
     return out_layer
 
 
-def train_tf(X_train, y_train, X_test):
-    pass
+def train_tf(X_train, y_train, X_test, y_test):
+    # initialize variables
+    num_inputs = 11
+    print(num_inputs)
+    num_hidden_1, num_hidden_2 = 10, 10
+    num_classes = 2
+    learning_rate = .001
+    training_epochs = 100
+
+    weights = {
+        'h1': tf.Variable(tf.random_normal([num_inputs, num_hidden_1])),
+        'h2': tf.Variable(tf.random_normal([num_hidden_1, num_hidden_2])),
+        'out': tf.Variable(tf.random_normal([num_hidden_2, num_classes]))
+    }
+    biases = {
+        'b1': tf.Variable(tf.random_normal([num_hidden_1])),
+        'b2': tf.Variable(tf.random_normal([num_hidden_2])),
+        'out': tf.Variable(tf.random_normal([num_classes]))
+    }
+
+    # construct model with placeholders
+    x_ = tf.placeholder("float", [None, num_inputs])
+    y_ = tf.placeholder("float", [None, num_classes])
+    model = multilayer_perceptron(x_, weights, biases)
+    cost = tf.reduce_mean(
+        tf.nn.softmax_cross_entropy_with_logits(logits=model, labels=y_))
+    optimizer = tf.train.AdamOptimizer(
+        learning_rate=learning_rate).minimize(cost)
+    init = tf.global_variables_initializer()
+    # train
+    with tf.Session() as sess:
+        sess.run(init)
+        for epoch in range(training_epochs):
+            avg_cost = 0.0
+            total_batch = int(len(X_train)/100)
+            X_batches = np.array_split(X_train, total_batch)
+            y_batches = np.array_split(y_train, total_batch)
+            # Loop over all batches
+            for i in range(total_batch):
+                batch_x, batch_y = X_batches[i], y_batches[i]
+                # Run optimization op (backprop) and cost op (to get loss value)
+                _, c = sess.run([optimizer, cost], feed_dict={x_: batch_x,
+                                                              y_: batch_y})
+                # Compute average loss
+                avg_cost += c / total_batch
+            # Display logs per epoch step
+            if epoch % 1 == 0:
+                print("Epoch:", '%04d' % (epoch+1),
+                      "cost=", "{:.9f}".format(avg_cost))
+        print("Optimization Finished!")
+
+    # Test model
+    correct_prediction = tf.equal(tf.argmax(model, 1), tf.argmax(y_train, 1))
+    # Calculate accuracy
+    accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
+    print("Accuracy:", accuracy.eval({x: X_test, y: y_test}))
+    global result
+    result = tf.argmax(model, 1).eval({x: X_test, y: y_test})
 
 
 def train(X_train, y_train, X_test):
